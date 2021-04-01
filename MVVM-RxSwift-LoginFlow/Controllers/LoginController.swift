@@ -27,15 +27,15 @@ class LoginController: UIViewController, ControllerType {
         super.viewDidLoad()
         
         configure(with: viewModel)
+        
+        loadData()
+
     }
     
     // MARK: - Functions
     func configure(with viewModel: ViewModelType) {
         
-        emailTextfield.rx.text.asObservable()
-            .ignoreNil()
-            .subscribe(viewModel.input.email)
-            .disposed(by: disposeBag)
+        emailTextfield.rx.text.orEmpty.asObservable().bind(to: viewModel.input.email).disposed(by: disposeBag)
         
         passwordTextfield.rx.text.asObservable()
             .ignoreNil()
@@ -58,6 +58,18 @@ class LoginController: UIViewController, ControllerType {
             })
             .disposed(by: disposeBag)
 
+        viewModel.output.userListObservable.subscribe(onNext:{users in
+            
+            
+            print(users)
+            
+        }).disposed(by: disposeBag)
+        
+    }
+    
+    func loadData() {
+        
+        viewModel.input.loadListTrigger.onNext("38388")
     }
 }
 

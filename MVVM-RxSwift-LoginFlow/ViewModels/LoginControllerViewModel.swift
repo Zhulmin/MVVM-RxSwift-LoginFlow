@@ -9,29 +9,50 @@
 import RxSwift
 
 class LoginControllerViewModel: ViewModelProtocol {
+    
     struct Input {
-        let email: AnyObserver<String>
-        let password: AnyObserver<String>
-        let signInDidTap: AnyObserver<Void>
+        
+        //方法一:
+        // 这里可以只使用Observer,暴露出去
+        // 里面再定义PublishSubject为私有变量,把PublishSubject赋值给这个Observer
+        
+        //内部变量
+//        private let email =  PublishSubject<String>()
+        
+        //暴露出去
+//        public let emailOberver = email.asOberver()
+        
+        // 使用PublishSubject是因为:
+        // 1.需要在外面为Observer,绑定UI事件
+        // 2.在里面Obervable, 被观察, 获取到参数值
+        // 把两个融合在一起了
+        
+        var email = PublishSubject<String>()
+        let password = PublishSubject<String>()
+        let signInDidTap = PublishSubject<Void>()
+        
+        let loadListTrigger : AnyObserver<String>
+        
     }
     struct Output {
-        let loginResultObservable: Observable<User>
-        let errorsObservable: Observable<Error>
+        
+        let userListObservable = PublishSubject<[User]>()
+
+        //
+        let loginResultObservable = PublishSubject<User>()
+    
+        let errorsObservable = PublishSubject<Error>()
     }
+    
+    
     // MARK: - Public properties
     let input: Input
     let output: Output
     
-    // MARK: - Private properties
-    private let emailSubject = PublishSubject<String>()
-    private let passwordSubject = PublishSubject<String>()
-    private let signInDidTapSubject = PublishSubject<Void>()
-    private let loginResultSubject = PublishSubject<User>()
-    private let errorsSubject = PublishSubject<Error>()
     private let disposeBag = DisposeBag()
     
     private var credentialsObservable: Observable<Credentials> {
-        return Observable.combineLatest(emailSubject.asObservable(), passwordSubject.asObservable()) { (email, password) in
+        return Observable.combineLatest(input.email, input.password) { (email, password) in
             return Credentials(email: email, password: password)
         }
     }
@@ -39,24 +60,37 @@ class LoginControllerViewModel: ViewModelProtocol {
     // MARK: - Init and deinit
     init(_ loginService: LoginServiceProtocol) {
         
-        input = Input(email: emailSubject.asObserver(),
-                      password: passwordSubject.asObserver(),
-                      signInDidTap: signInDidTapSubject.asObserver())
+        let loadData = PublishSubject<String>()
         
-        output = Output(loginResultObservable: loginResultSubject.asObservable(),
-                        errorsObservable: errorsSubject.asObservable())
+        input = Input(loadListTrigger: loadData.asObserver())
         
-        signInDidTapSubject
+        output = Output()
+        
+        
+        loadData.flatMapLatest({userId in
+            return loginService.fetchuUserList(with: userId).materialize()
+            
+        }).subscribe(onNext:{[weak self] users in
+            
+            self?.output.userListObservable.on(users)
+            
+        }).disposed(by: disposeBag)
+        
+        
+        input.signInDidTap
             .withLatestFrom(credentialsObservable)
             .flatMapLatest { credentials in
+                
                 return loginService.signIn(with: credentials).materialize()
             }
             .subscribe(onNext: { [weak self] event in
+                
                 switch event {
                 case .next(let user):
-                    self?.loginResultSubject.onNext(user)
+                    
+                    self?.output.loginResultObservable.onNext(user)
                 case .error(let error):
-                    self?.errorsSubject.onNext(error)
+                    self?.output.errorsObservable.onNext(error)
                 default:
                     break
                 }
