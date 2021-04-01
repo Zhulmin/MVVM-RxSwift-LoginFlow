@@ -1,8 +1,12 @@
-# MVVM-RxSwift-LoginFlow
+
+
+
+#### Fork from [MVVM-RxSwift-LoginFlow](https://github.com/alexey-savchenko/MVVM-RxSwift-LoginFlow)
 
 Sample app for a blog post on Medium - https://medium.com/@caesarus1993/login-screen-implementation-using-mvvm-rxswift-efe832c687fa
 
 
+##### note
 
 1.定义Input和Output
 
