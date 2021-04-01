@@ -7,6 +7,7 @@
 //
 
 import RxSwift
+import RxCocoa
 
 class LoginControllerViewModel: ViewModelProtocol {
     
@@ -31,12 +32,19 @@ class LoginControllerViewModel: ViewModelProtocol {
         let password = PublishSubject<String>()
         let signInDidTap = PublishSubject<Void>()
         
-        let loadListTrigger : AnyObserver<String>
+        
+                
+        //let loadListTrigger :  Observable<String>
+
+        
+        //暴露出去Observer,发起请求, 内部Observable,监听发起网络请求
+
+        let loadListTrigger =  PublishSubject<String>()
         
     }
     struct Output {
         
-        let userListObservable = PublishSubject<[User]>()
+        let userListObservable = BehaviorRelay<[User]>.init(value: [])
 
         //
         let loginResultObservable = PublishSubject<User>()
@@ -60,19 +68,26 @@ class LoginControllerViewModel: ViewModelProtocol {
     // MARK: - Init and deinit
     init(_ loginService: LoginServiceProtocol) {
         
-        let loadData = PublishSubject<String>()
-        
-        input = Input(loadListTrigger: loadData.asObserver())
+       
+        input = Input()
         
         output = Output()
         
         
-        loadData.flatMapLatest({userId in
-            return loginService.fetchuUserList(with: userId).materialize()
+        // 如果input中之定义了Observer
+        // 这里需要创建局部变量, 并赋值给Observer (input初始化方法中)
+//        let loadData = PublishSubject<String>()
+        
+    
+        input.loadListTrigger.flatMapLatest({userId in
+            
+            //如果使用Relay, 这里不用加.materialize()
+            return loginService.fetchuUserList(with: userId)
             
         }).subscribe(onNext:{[weak self] users in
             
-            self?.output.userListObservable.on(users)
+            let old = self?.output.userListObservable.value
+            self?.output.userListObservable.accept(old! + users)
             
         }).disposed(by: disposeBag)
         

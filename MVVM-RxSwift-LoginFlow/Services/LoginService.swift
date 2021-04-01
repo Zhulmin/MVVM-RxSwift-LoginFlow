@@ -8,6 +8,7 @@
 
 import Foundation
 import RxSwift
+import RxCocoa
 
 protocol LoginServiceProtocol {
     func signIn(with credentials: Credentials) -> Observable<User>
@@ -28,13 +29,12 @@ class LoginService: LoginServiceProtocol {
     
     
     func fetchuUserList(with userId : String) -> Observable<[User]> {
-        return Observable.create { observer in
-            /*
-             Networking logic here.
-            */
-            let users = [User()]
-            observer.onNext(users) // Simulation of successful user authentication.
+        
+        return Observable.create { (ob) -> Disposable in
+            
+            
             return Disposables.create()
         }
+        
     }
 }
